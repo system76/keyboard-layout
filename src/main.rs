@@ -82,10 +82,17 @@ fn main() {
     // };
 
     // Mini-choc switch
+    // let key = Key {
+    //     margin: Rect::new(0.0, 0.0, 19.0, 19.0),
+    //     cap: Rect::new(0.75, 1.25, 17.5, 16.5),
+    //     hole: Rect::new(2.575, 3.25, 13.85, 12.5),
+    // };
+
+    // MX full size switch
     let key = Key {
         margin: Rect::new(0.0, 0.0, 19.0, 19.0),
-        cap: Rect::new(0.75, 1.25, 17.5, 16.5),
-        hole: Rect::new(2.575, 3.25, 13.85, 12.5),
+        cap: Rect::new(1.25, 1.25, 16.5, 16.5),
+        hole: Rect::new(2.5, 2.5, 14.0, 14.0),
     };
 
     let mut drawing = Drawing::default();
