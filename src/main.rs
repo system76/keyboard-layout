@@ -70,7 +70,7 @@ impl Key {
 }
 
 fn main() {
-    let json = fs::read_to_string("res/ugly-dense.json").unwrap();
+    let json = fs::read_to_string("res/tenkey-default.json").unwrap();
     let v: Value = serde_json::from_str(&json).unwrap();
     println!("{:#?}", v);
 
@@ -100,6 +100,7 @@ fn main() {
     let mut x = 0.0;
     let mut y = 0.0;
     let mut w = 1.0;
+    let mut h = 1.0;
 
     if let Value::Array(rows) = v {
         for row in rows {
@@ -123,11 +124,19 @@ fn main() {
                                         }
                                     }
                                 }
+                                if let Some(h_v) = o.get("h") {
+                                    if let Value::Number(h_n) = h_v {
+                                        if let Some(h_f) = h_n.as_f64() {
+                                            h = h_f;
+                                        }
+                                    }
+                                }
                             },
                             Value::String(s) => {
                                 println!("Key {}, {} = {:?}", x, y, s);
 
                                 x += key.margin.w * (w - 1.0) / 2.0;
+                                y -= key.margin.h * (h - 1.0) / 2.0;
 
                                 drawing.entities.extend_from_slice(
                                     &key.entities(x, y)
@@ -136,7 +145,9 @@ fn main() {
                                 x += key.margin.w * (w - 1.0) / 2.0;
 
                                 x += key.margin.w;
+                                y += key.margin.h * (h - 1.0) / 2.0;
                                 w = 1.0;
+                                h = 1.0;
                             }
                             _ => (),
                         }
