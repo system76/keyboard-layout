@@ -2,6 +2,8 @@ use dxf::{Drawing, Point, entities::*};
 use serde_json::Value;
 use std::fs;
 
+mod kicad;
+
 struct Rect {
     x: f64,
     y: f64,
@@ -70,7 +72,7 @@ impl Key {
 }
 
 fn main() {
-    let json = fs::read_to_string("res/tenkey-default.json").unwrap();
+    let json = fs::read_to_string("res/launch_1.json").unwrap();
     let v: Value = serde_json::from_str(&json).unwrap();
     println!("{:#?}", v);
 
@@ -96,7 +98,10 @@ fn main() {
     };
 
     let mut drawing = Drawing::default();
+    let mut switches = String::new();
 
+    let mut row_i = 0;
+    let mut col_i = 0;
     let mut x = 0.0;
     let mut y = 0.0;
     let mut w = 1.0;
@@ -142,12 +147,20 @@ fn main() {
                                     &key.entities(x, y)
                                 );
 
+                                switches.push_str(&kicad::switch(
+                                        &kicad::reference(row_i, col_i),
+                                        x,
+                                        -y
+                                ));
+
                                 x += key.margin.w * (w - 1.0) / 2.0;
 
                                 x += key.margin.w;
                                 y += key.margin.h * (h - 1.0) / 2.0;
                                 w = 1.0;
                                 h = 1.0;
+                                
+                                col_i += 1;
                             }
                             _ => (),
                         }
@@ -155,6 +168,9 @@ fn main() {
 
                     x = 0.0;
                     y -= key.margin.h;
+
+                    col_i = 0;
+                    row_i += 1;
                 },
                 _ => (),
             }
@@ -162,4 +178,5 @@ fn main() {
     }
 
     drawing.save_file("test.dxf").unwrap();
+    fs::write("test.kicad_pcb", kicad::pcb(&switches)).unwrap();
 }
