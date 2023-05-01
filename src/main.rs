@@ -2,7 +2,8 @@ use dxf::{Drawing, Point, entities::*};
 use serde_json::Value;
 use std::fs;
 
-mod kicad;
+mod launch;
+mod virgo;
 
 struct Rect {
     x: f64,
@@ -76,107 +77,110 @@ fn main() {
     let v: Value = serde_json::from_str(&json).unwrap();
     println!("{:#?}", v);
 
-    // X switch
-    // let key = Key {
-    //     margin: Rect::new(0.0, 0.0, 19.0, 19.0),
-    //     cap: Rect::new(1.25, 1.25, 16.5, 16.5),
-    //     hole: Rect::new(2.5, 2.5, 14.0, 14.0),
-    // };
+    for &spacing in &[19.0, 20.5] {
+        // X switch
+        let key = Key {
+            margin: Rect::new(0.0, 0.0, spacing, spacing),
+            cap: Rect::new(1.25, 1.25, 16.5, 16.5),
+            hole: Rect::new(2.5, 2.5, 14.0, 14.0),
+        };
 
-    // Mini-choc switch
-    // let key = Key {
-    //     margin: Rect::new(0.0, 0.0, 19.0, 19.0),
-    //     cap: Rect::new(0.75, 1.25, 17.5, 16.5),
-    //     hole: Rect::new(2.575, 3.25, 13.85, 12.5),
-    // };
+        // Mini-choc switch
+        // let key = Key {
+        //     margin: Rect::new(0.0, 0.0, 19.0, 19.0),
+        //     cap: Rect::new(0.75, 1.25, 17.5, 16.5),
+        //     hole: Rect::new(2.575, 3.25, 13.85, 12.5),
+        // };
 
-    // MX full size switch
-    let key = Key {
-        margin: Rect::new(0.0, 0.0, 19.0, 19.0),
-        cap: Rect::new(1.25, 1.25, 16.5, 16.5),
-        hole: Rect::new(2.5, 2.5, 14.0, 14.0),
-    };
+        // MX full size switch
+        // let key = Key {
+        //     margin: Rect::new(0.0, 0.0, 19.0, 19.0),
+        //     cap: Rect::new(1.25, 1.25, 16.5, 16.5),
+        //     hole: Rect::new(2.5, 2.5, 14.0, 14.0),
+        // };
 
-    let mut drawing = Drawing::default();
-    let mut switches = String::new();
+        let mut drawing = Drawing::default();
+        let mut switches = String::new();
 
-    let mut row_i = 0;
-    let mut col_i = 0;
-    let mut x = 0.0;
-    let mut y = 0.0;
-    let mut w = 1.0;
-    let mut h = 1.0;
+        let mut row_i = 0;
+        let mut col_i = 0;
+        let mut x = 0.0;
+        let mut y = 0.0;
+        let mut w = 1.0;
+        let mut h = 1.0;
 
-    if let Value::Array(rows) = v {
-        for row in rows {
-            match row {
-                Value::Array(cols) => {
-                    for col in cols {
-                        match col {
-                            Value::Object(o) => {
-                                println!("Key metadata {:?}", o);
-                                if let Some(x_v) = o.get("x") {
-                                    if let Value::Number(x_n) = x_v {
-                                        if let Some(x_f) = x_n.as_f64() {
-                                            x += x_f * key.margin.w;
+        if let Value::Array(ref rows) = v {
+            for row in rows {
+                match row {
+                    Value::Array(cols) => {
+                        for col in cols {
+                            match col {
+                                Value::Object(o) => {
+                                    println!("Key metadata {:?}", o);
+                                    if let Some(x_v) = o.get("x") {
+                                        if let Value::Number(x_n) = x_v {
+                                            if let Some(x_f) = x_n.as_f64() {
+                                                x += x_f * key.margin.w;
+                                            }
                                         }
                                     }
-                                }
-                                if let Some(w_v) = o.get("w") {
-                                    if let Value::Number(w_n) = w_v {
-                                        if let Some(w_f) = w_n.as_f64() {
-                                            w = w_f;
+                                    if let Some(w_v) = o.get("w") {
+                                        if let Value::Number(w_n) = w_v {
+                                            if let Some(w_f) = w_n.as_f64() {
+                                                w = w_f;
+                                            }
                                         }
                                     }
-                                }
-                                if let Some(h_v) = o.get("h") {
-                                    if let Value::Number(h_n) = h_v {
-                                        if let Some(h_f) = h_n.as_f64() {
-                                            h = h_f;
+                                    if let Some(h_v) = o.get("h") {
+                                        if let Value::Number(h_n) = h_v {
+                                            if let Some(h_f) = h_n.as_f64() {
+                                                h = h_f;
+                                            }
                                         }
                                     }
+                                },
+                                Value::String(s) => {
+                                    println!("Key {}, {} = {:?}", x, y, s);
+
+                                    x += key.margin.w * (w - 1.0) / 2.0;
+                                    y -= key.margin.h * (h - 1.0) / 2.0;
+
+                                    drawing.entities.extend_from_slice(
+                                        &key.entities(x, y)
+                                    );
+
+                                    switches.push_str(&virgo::switch(
+                                            &virgo::reference(row_i, col_i),
+                                            x,
+                                            -y,
+                                            col_i % 2 == 0,
+                                    ));
+
+                                    x += key.margin.w * (w - 1.0) / 2.0;
+
+                                    x += key.margin.w;
+                                    y += key.margin.h * (h - 1.0) / 2.0;
+                                    w = 1.0;
+                                    h = 1.0;
+
+                                    col_i += 1;
                                 }
-                            },
-                            Value::String(s) => {
-                                println!("Key {}, {} = {:?}", x, y, s);
-
-                                x += key.margin.w * (w - 1.0) / 2.0;
-                                y -= key.margin.h * (h - 1.0) / 2.0;
-
-                                drawing.entities.extend_from_slice(
-                                    &key.entities(x, y)
-                                );
-
-                                switches.push_str(&kicad::switch(
-                                        &kicad::reference(row_i, col_i),
-                                        x,
-                                        -y
-                                ));
-
-                                x += key.margin.w * (w - 1.0) / 2.0;
-
-                                x += key.margin.w;
-                                y += key.margin.h * (h - 1.0) / 2.0;
-                                w = 1.0;
-                                h = 1.0;
-                                
-                                col_i += 1;
+                                _ => (),
                             }
-                            _ => (),
                         }
-                    }
 
-                    x = 0.0;
-                    y -= key.margin.h;
+                        x = 0.0;
+                        y -= key.margin.h;
 
-                    col_i = 0;
-                    row_i += 1;
-                },
-                _ => (),
+                        col_i = 0;
+                        row_i += 1;
+                    },
+                    _ => (),
+                }
             }
         }
-    }
 
-    drawing.save_file("test.dxf").unwrap();
-    fs::write("test.kicad_pcb", kicad::pcb(&switches)).unwrap();
+        drawing.save_file(&format!("test-{}mm.dxf", spacing)).unwrap();
+        fs::write(&format!("test-{}mm.kicad_pcb", spacing), virgo::pcb(&switches)).unwrap();
+    }
 }
