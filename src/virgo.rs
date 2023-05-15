@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 pub fn reference(row_i: usize, mut col_i: usize) -> String {
     // WARNING: Board specific modifications for holes:
     match row_i {
@@ -17,18 +19,40 @@ pub fn reference(row_i: usize, mut col_i: usize) -> String {
     )
 }
 
+pub fn mount(x: f64, y: f64) -> String {
+    format!(
+r#"
+  (footprint "local:MountingHole_1.8mm_Pad" (layer "F.Cu")
+    (tstamp 5c74d3f2-347f-4f03-ab4d-10600d820876)
+    (at {x} {y})
+    (descr "Mounting Hole 1.8mm")
+    (tags "mounting hole 1.8mm")
+    (attr exclude_from_pos_files exclude_from_bom)
+    (fp_circle (center 0 0) (end 1.5 0)
+      (stroke (width 0.15) (type solid)) (fill none) (layer "Cmts.User") (tstamp 94237e3a-78db-401d-a248-e0ca891ee1f8))
+    (fp_circle (center 0 0) (end 1.75 0)
+      (stroke (width 0.05) (type solid)) (fill none) (layer "F.CrtYd") (tstamp d7083825-bbae-49db-9f12-1f13302711cb))
+    (pad "1" thru_hole circle (at 0 0) (size 3 3) (drill 1.8) (layers "*.Cu" "*.Mask") (tstamp f7de860d-2664-4827-9a17-e0308aa8b525))
+  )
+"#,
+        x=x,
+        y=y,
+    )
+}
 
-pub fn switch(reference: &str, x: f64, y: f64, has_diode: bool) -> String {
+pub fn switch(reference: &str, x: f64, y: f64, col_i: usize) -> String {
     let (switch_x, switch_y) = (x + 31.0, y + 45.0);
-    let (diode_x, diode_y) = (x + 43.8, y + 41.1);
     let (led_x, led_y) = (x + 34.5, y + 37.25);
 
-    let diode = if has_diode {
+    let mut footprints = String::new();
+
+    let diode = if col_i % 2 == 0 {
+        let (diode_x, diode_y) = (x + 38.75, y + 32.55);
         format!(
 r#"
   (footprint "Package_TO_SOT_SMD:SOT-23" (layer "F.Cu")
     (tstamp 00000000-0000-0000-0000-00005f283a1e)
-    (at {diode_x} {diode_y} -90)
+    (at {diode_x} {diode_y} 90)
     (descr "SOT-23, Standard")
     (tags "SOT-23")
     (property "Manufacturer" "Nexperia")

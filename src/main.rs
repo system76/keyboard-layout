@@ -1,6 +1,6 @@
 use dxf::{Drawing, Point, entities::*};
 use serde_json::Value;
-use std::fs;
+use std::{collections::HashMap, fs};
 
 mod launch;
 mod virgo;
@@ -101,6 +101,7 @@ fn main() {
 
         let mut drawing = Drawing::default();
         let mut switches = String::new();
+        let mut mounts = HashMap::new();
 
         let mut row_i = 0;
         let mut col_i = 0;
@@ -110,9 +111,25 @@ fn main() {
         let mut h = 1.0;
 
         if let Value::Array(ref rows) = v {
+            let mut total_rows = 0;
+            for row in rows.iter() {
+                match row {
+                    Value::Array(_) => total_rows += 1,
+                    _ => (),
+                }
+            }
+
             for row in rows {
                 match row {
                     Value::Array(cols) => {
+                        let mut total_cols = 0;
+                        for col in cols.iter() {
+                            match col {
+                                Value::String(_) => total_cols += 1,
+                                _ => (),
+                            }
+                        }
+
                         for col in cols {
                             match col {
                                 Value::Object(o) => {
@@ -150,11 +167,35 @@ fn main() {
                                     );
 
                                     switches.push_str(&virgo::switch(
-                                            &virgo::reference(row_i, col_i),
-                                            x,
-                                            -y,
-                                            col_i % 2 == 0,
+                                        &virgo::reference(row_i, col_i),
+                                        x,
+                                        -y,
+                                        col_i,
                                     ));
+
+                                    {
+                                        //HACKS
+                                        let mount_center_x = (24.775 + 43.775) / 2.0;
+                                        let mount_offset_x = key.margin.w * w / 2.0;
+                                        let mount_center_y = (32.643 + 51.643) / 2.0;
+                                        let mount_offset_y = key.margin.h * h / 2.0;
+                                        for &mount_y in &[
+                                            -y + mount_center_y - mount_offset_y,
+                                            -y + mount_center_y + mount_offset_y,
+                                        ] {
+                                            for &mount_x in &[
+                                                x + mount_center_x - mount_offset_x,
+                                                x + mount_center_x + mount_offset_x,
+                                            ] {
+                                                let mount_x_int = (mount_x * 1000.0).floor() as i64;
+                                                let mount_y_int = (mount_y * 1000.0).floor() as i64;
+                                                mounts.insert(
+                                                    (mount_x_int, mount_y_int),
+                                                    virgo::mount(mount_x, mount_y)
+                                                );
+                                            }
+                                        }
+                                    }
 
                                     x += key.margin.w * (w - 1.0) / 2.0;
 
@@ -178,6 +219,10 @@ fn main() {
                     _ => (),
                 }
             }
+        }
+
+        for (_, mount) in mounts {
+            switches.push_str(&mount);
         }
 
         drawing.save_file(&format!("test-{}mm.dxf", spacing)).unwrap();
